@@ -2,4 +2,5 @@
 
 ## 2024-12-11
 
-First commit
+- First commit
+- Improve loop handling
