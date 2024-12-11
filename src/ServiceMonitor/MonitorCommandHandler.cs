@@ -71,36 +71,47 @@ internal sealed class MonitorCommandHandler : ICommandHandler
         // Show startup message
         ShowStartup(context.Console, serviceInfo, path);
 
+        CancellationToken token = context.GetCancellationToken();
+        TimeSpan interval = TimeSpan.FromMinutes(1);
+
         // Write CSV headers
         await textWriter.WriteLineAsync(ServiceInfo.CsvHeader);
 
-        CancellationToken token = context.GetCancellationToken();
-        TimeSpan interval = TimeSpan.FromMinutes(1);
-        uint remainingCount = Count;
+        // Write first CSV record
+        await WriteRecordAsync(textWriter, serviceInfo, token);
 
-        while (true)
+        // Exit if Count=1
+        if (Count == 1)
         {
-            // Write a CSV record
-            await textWriter.WriteLineAsync(serviceInfo.ToCsvString());
+            return;
+        }
 
-            // Exit when Count=1
-            remainingCount--;
-            if (remainingCount == 0)
-            {
-                return;
-            }
+        // Set next run time
+        DateTime nextRunTime = serviceInfo.LastUpdateTime.UtcDateTime;
+        uint remainingCount = Count - 1;
 
-            // Set next run time
-            DateTime nextRunTime = serviceInfo.LastUpdateTime.UtcDateTime + interval;
+        while (remainingCount > 0)
+        {
+            // Wait for next run
+            nextRunTime += interval;
             TimeSpan delay = nextRunTime - DateTime.UtcNow;
             if (delay > TimeSpan.Zero)
             {
                 await Task.Delay(delay, token);
             }
 
-            // Refresh service status
-            serviceInfo.Refresh();
+            // Write a CSV record
+            await WriteRecordAsync(textWriter, serviceInfo, token);
+
+            remainingCount--;
         }
+    }
+
+    // No static method for future expansion
+    private async Task WriteRecordAsync(TextWriter textWriter, ServiceInfo serviceInfo, CancellationToken token)
+    {
+        await textWriter.WriteLineAsync(serviceInfo.ToCsvString());
+        serviceInfo.Refresh();
     }
 
     private static void ShowStartup(IConsole console, ServiceInfo serviceInfo, string path)
