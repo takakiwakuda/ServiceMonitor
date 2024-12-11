@@ -4,3 +4,4 @@
 
 - First commit
 - Improve loop handling
+- Fix issue that immediately writes a second record

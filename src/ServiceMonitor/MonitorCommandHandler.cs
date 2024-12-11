@@ -71,14 +71,11 @@ internal sealed class MonitorCommandHandler : ICommandHandler
         // Show startup message
         ShowStartup(context.Console, serviceInfo, path);
 
-        CancellationToken token = context.GetCancellationToken();
-        TimeSpan interval = TimeSpan.FromMinutes(1);
-
         // Write CSV headers
         await textWriter.WriteLineAsync(ServiceInfo.CsvHeader);
 
         // Write first CSV record
-        await WriteRecordAsync(textWriter, serviceInfo, token);
+        await textWriter.WriteLineAsync(serviceInfo.ToCsvString());
 
         // Exit if Count=1
         if (Count == 1)
@@ -88,6 +85,10 @@ internal sealed class MonitorCommandHandler : ICommandHandler
 
         // Set next run time
         DateTime nextRunTime = serviceInfo.LastUpdateTime.UtcDateTime;
+        serviceInfo.Refresh();
+
+        CancellationToken token = context.GetCancellationToken();
+        TimeSpan interval = TimeSpan.FromMinutes(1);
         uint remainingCount = Count - 1;
 
         while (remainingCount > 0)
